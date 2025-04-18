@@ -36,6 +36,13 @@ def login():
 def dashboard():
     return render_template('dashboard.html', data=dashboard_data)
 
+@app.route('/logout')
+def logout():
+    # Clear the session to log out the user
+    session.clear()
+    return redirect('/')
+
+
 @app.route('/start_automation', methods=['POST'])
 def start_automation():
     global dashboard_data
@@ -56,10 +63,12 @@ def start_automation():
         # Catalog page
         driver.get("https://arrahnueauction.bankrakyat.com.my/catalog")
         time.sleep(5)
+        
+        # Re-fetch the cards
         cards = driver.find_elements(By.CLASS_NAME, "col-lg-4")
+        total_cards = len(cards)
 
         data = []
-        total_cards = len(driver.find_elements(By.CLASS_NAME, "col-lg-4"))
 
         for index in range(total_cards):
             try:
@@ -67,16 +76,12 @@ def start_automation():
                 cards = driver.find_elements(By.CLASS_NAME, "col-lg-4")
                 card = cards[index]
         
-                # OPTIONAL: Get branch name before clicking (from inside the card)
-                # 
-        
                 driver.execute_script("arguments[0].scrollIntoView(true);", card)
                 card.click()
                 time.sleep(3)
         
-                # If you want to override branch from modal instead, comment the one above and use this:
+                # Extract data from the modal
                 branch = driver.find_element(By.XPATH, "//h4[@class='modal-title']/span").text.replace("Branch:", "").strip()
-        
                 reserve_price_raw = driver.find_element(By.XPATH, "//div[contains(text(), 'Reserve Price')]/following-sibling::div").text
                 product_type = driver.find_element(By.XPATH, "//div[contains(text(), 'Type:')]/following-sibling::div").text
                 weight = driver.find_element(By.XPATH, "//div[contains(text(), 'Weight:')]/following-sibling::div").text
@@ -85,6 +90,7 @@ def start_automation():
                 reserve_price = float(reserve_price_raw.replace("RM", "").replace(",", "").strip())
                 eligible = grade.strip() in ["18K", "22K"]
         
+                # Append the extracted data to the data list
                 data.append({
                     'index': index,
                     'branch': branch,
@@ -96,8 +102,10 @@ def start_automation():
                 })
         
                 # Close the modal properly
-                close_btn = driver.find_element(By.CLASS_NAME, "btn-close")
+                close_btn = driver.find_element(By.XPATH, "//div[contains(@class, 'modal-footer')]//button[contains(text(), 'Close')]")
+                print(f"Clicking close button for card {index}")
                 close_btn.click()
+                print(f"Waiting for modal to close for card {index}")
         
                 # Wait for modal to disappear
                 WebDriverWait(driver, 10).until(
@@ -109,6 +117,7 @@ def start_automation():
                 print(f"Error processing card {index}: {e}")
                 continue
         
+        # Save all data in the global variable
         dashboard_data = data
         driver.quit()
         return jsonify({'status': 'ok'})
