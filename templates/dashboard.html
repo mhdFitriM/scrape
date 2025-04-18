@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <script>
+        async function startAutomation() {
+            const res = await fetch('/start_automation', { method: 'POST' });
+            const result = await res.json();
+            if (result.status === 'ok') {
+                window.location.reload();
+            } else {
+                alert('Automation failed: ' + result.message);
+            }
+        }
+
+        async function bidItem(index) {
+            const res = await fetch(`/bid/${index}`, { method: 'POST' });
+            const result = await res.json();
+            if (result.status === 'success') {
+                alert('Bid placed successfully!');
+            } else {
+                alert('Bid failed: ' + result.message);
+            }
+        }
+    </script>
+</head>
+<body>
+    <h2>Dashboard</h2>
+    <button onclick="startAutomation()">Start Automation</button>
+    <br><br>
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>Branch</th>
+                <th>Type</th>
+                <th>Weight</th>
+                <th>Grade</th>
+                <th>Reserve Price (RM)</th>
+                <th>Eligible</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+            <tr>
+                <td>{{ item.branch }}</td>
+                <td>{{ item.type }}</td>
+                <td>{{ item.weight }}</td>
+                <td>{{ item.grade }}</td>
+                <td>{{ item.reserve_price }}</td>
+                <td>{{ 'Yes' if item.eligible else 'No' }}</td>
+                <td>
+                    {% if item.eligible %}
+                    <button onclick="bidItem({{ item.index }})">Bid</button>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
